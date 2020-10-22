@@ -1,0 +1,72 @@
+== Metal3 IP Address Manager for Cluster API Provider Metal3
+
+https://jenkins.nordix.org/view/Airship/job/airship_master_v1a4_integration_test_ubuntu[image:https://jenkins.nordix.org/view/Airship/job/airship_master_v1a4_integration_test_ubuntu/badge/icon?subject=Ubuntu%20E2E%20V1alpha4[Ubuntu
+V1alpha4 build status]]
+https://jenkins.nordix.org/view/Airship/job/airship_master_v1a4_integration_test_centos[image:https://jenkins.nordix.org/view/Airship/job/airship_master_v1a4_integration_test_centos/badge/icon?subject=CentOS%20E2E%20V1alpha4[CentOS
+V1alpha4 build status]]
+
+This repository contains a controller to manage static IP address
+allocations in
+https://github.com/metal3-io/cluster-api-provider-metal3/[Cluster API
+Provider Metal3].
+
+For more information about this controller and related repositories, see
+http://metal3.io/[metal3.io].
+
+=== Compatibility with Cluster API
+
+[cols=",,",options="header",]
+|===
+|IPAM version |CAPM3 version |Cluster API version
+|v1alpha1 (v0.1.X) |v1alpha4 (v0.4.X) |v1alpha3 (v0.3.X)
+|===
+
+=== Development Environment
+
+See https://github.com/metal3-io/metal3-dev-env[metal3-dev-env] for an
+end-to-end development and test environment for
+https://github.com/metal3-io/cluster-api-provider-metal3/[cluster-api-provider-metal3]
+and https://github.com/metal3-io/baremetal-operator[baremetal-operator].
+
+=== API
+
+See the link:docs/api.md[API Documentation] for details about the
+objects used with this controller. You can also see the
+link:docs/deployment_workflow.md[cluster deployment workflow] for the
+outline of the deployment process.
+
+=== Deployment and examples
+
+==== Deploy IPAM
+
+Deploys IPAM CRDs and deploys IPAM controllers
+
+[source,sh]
+----
+    make deploy
+----
+
+==== Run locally
+
+Runs CAPM3 controller locally
+
+[source,sh]
+----
+    kubectl scale -n capm3-system deployment.v1.apps/metal3-ipam-controller-manager \
+      --replicas 0
+    make run
+----
+
+==== Deploy an example pool
+
+[source,sh]
+----
+    make deploy-examples
+----
+
+==== Delete the example pool
+
+[source,sh]
+----
+    make delete-examples
+----
