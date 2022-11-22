@@ -66,7 +66,7 @@ func main() {
 		"Namespace that the controller watches to reconcile IPAM objects. If unspecified, the controller watches for IPAM objects across all namespaces.")
 	flag.DurationVar(&syncPeriod, "sync-period", 10*time.Minute,
 		"The minimum interval at which watched resources are reconciled (e.g. 15m)")
-	flag.IntVar(&webhookPort, "webhook-port", 9443,
+	flag.IntVar(&webhookPort, "webhook-port", 0,
 		"Webhook Server port")
 	flag.StringVar(
 		&webhookCertDir,
@@ -142,6 +142,9 @@ func setupChecks(mgr ctrl.Manager) {
 }
 
 func setupReconcilers(ctx context.Context, mgr ctrl.Manager) {
+	if webhookPort != 0 {
+		return
+	}
 	if err := (&controllers.IPPoolReconciler{
 		Client:           mgr.GetClient(),
 		ManagerFactory:   ipam.NewManagerFactory(mgr.GetClient()),
@@ -154,6 +157,9 @@ func setupReconcilers(ctx context.Context, mgr ctrl.Manager) {
 }
 
 func setupWebhooks(mgr ctrl.Manager) {
+	if webhookPort == 0 {
+		return
+	}
 	if err := (&ipamv1.IPPool{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "IPPool")
 		os.Exit(1)

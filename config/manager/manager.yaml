@@ -21,7 +21,6 @@ spec:
       - command:
         - /manager
         args:
-          - "--webhook-port=9443"
         image: controller:latest
         imagePullPolicy: IfNotPresent
         name: manager
