@@ -129,6 +129,23 @@ in the Metal3 project to take in the new major or minor release. These steps are
 documented in
 [Metal3 release process](https://github.com/metal3-io/metal3-docs/blob/main/processes/releasing.md)
 
+### Dependabot configuration
+
+In `main` branch, we need to update Dependabot configuration to allow updates
+to release branch dependencies and GitHub Workflows.
+
+If project dependencies or modules have not changed, we copy the previous release
+branch configuration and amend the `target-branch` to point to our new release
+branch. We also remove the EOL release branch at the same time, as updating
+`dependabot.yml` causes Dependabot to run the rules, ignoring the configured
+schedule.
+
+If project dependencies have changed, then copy the configuration of `main`,
+and adjust the `ignore` rules to match release branches. Generic rule is that we
+don't allow major or minor bumps in release branches.
+
+[Prior art](https://github.com/metal3-io/ip-address-manager/pull/1015)
+
 ### Branch protection rules
 
 Branch protection rules need to be applied to the new release branch. Copy the
