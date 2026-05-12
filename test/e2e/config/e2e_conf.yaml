@@ -1,0 +1,214 @@
+# E2E test scenario using local dev images and manifests built from the source tree for following providers:
+# - cluster-api
+# - bootstrap kubeadm
+# - control-plane kubeadm
+# - metal3
+
+images:
+# Use local dev images built source tree;
+- name: quay.io/metal3-io/cluster-api-provider-metal3:latest
+  loadBehavior: mustLoad
+- name: quay.io/metal3-io/baremetal-operator:latest
+  loadBehavior: mustLoad
+- name: quay.io/metal3-io/ip-address-manager:latest
+  loadBehavior: mustLoad
+
+providers:
+- name: cluster-api
+  type: CoreProvider
+  versions:
+  - name: "{go://sigs.k8s.io/cluster-api@v1.13}"
+    value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/{go://sigs.k8s.io/cluster-api@v1.13}/core-components.yaml"
+    type: "url"
+    contract: v1beta2
+    replacements:
+    - old: --metrics-addr=127.0.0.1:8080
+      new: --metrics-addr=:8080
+    files:
+    - sourcePath: "../data/shared/capi/v1.13/metadata.yaml"
+  - name: v1.13.0
+    value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.13.0/core-components.yaml"
+    type: "url"
+    contract: v1beta2
+    replacements:
+    - old: --metrics-addr=127.0.0.1:8080
+      new: --metrics-addr=:8080
+    files:
+    - sourcePath: "../data/shared/capi/v1.13/metadata.yaml"
+  - name: "{go://sigs.k8s.io/cluster-api@v1.12}"
+    value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/{go://sigs.k8s.io/cluster-api@v1.12}/core-components.yaml"
+    type: "url"
+    contract: v1beta1
+    replacements:
+    - old: --metrics-addr=127.0.0.1:8080
+      new: --metrics-addr=:8080
+    files:
+    - sourcePath: "../data/shared/capi/v1.12/metadata.yaml"
+- name: kubeadm
+  type: BootstrapProvider
+  versions:
+  - name: "{go://sigs.k8s.io/cluster-api@v1.13}"
+    value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/{go://sigs.k8s.io/cluster-api@v1.13}/bootstrap-components.yaml"
+    type: "url"
+    contract: v1beta2
+    replacements:
+    - old: --metrics-addr=127.0.0.1:8080
+      new: --metrics-addr=:8080
+    files:
+    - sourcePath: "../data/shared/capi/v1.13/metadata.yaml"
+  - name: v1.13.0
+    value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.13.0/bootstrap-components.yaml"
+    type: "url"
+    contract: v1beta2
+    replacements:
+    - old: --metrics-addr=127.0.0.1:8080
+      new: --metrics-addr=:8080
+    files:
+    - sourcePath: "../data/shared/capi/v1.13/metadata.yaml"
+  - name: "{go://sigs.k8s.io/cluster-api@v1.12}"
+    value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/{go://sigs.k8s.io/cluster-api@v1.12}/bootstrap-components.yaml"
+    type: "url"
+    contract: v1beta1
+    replacements:
+    - old: --metrics-addr=127.0.0.1:8080
+      new: --metrics-addr=:8080
+    files:
+    - sourcePath: "../data/shared/capi/v1.12/metadata.yaml"
+- name: kubeadm
+  type: ControlPlaneProvider
+  versions:
+  - name: "{go://sigs.k8s.io/cluster-api@v1.13}"
+    value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/{go://sigs.k8s.io/cluster-api@v1.13}/control-plane-components.yaml"
+    type: "url"
+    contract: v1beta2
+    replacements:
+    - old: --metrics-addr=127.0.0.1:8080
+      new: --metrics-addr=:8080
+    files:
+    - sourcePath: "../data/shared/capi/v1.13/metadata.yaml"
+  - name: v1.13.0
+    value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.13.0/control-plane-components.yaml"
+    type: "url"
+    contract: v1beta2
+    replacements:
+    - old: --metrics-addr=127.0.0.1:8080
+      new: --metrics-addr=:8080
+    files:
+    - sourcePath: "../data/shared/capi/v1.13/metadata.yaml"
+  - name: "{go://sigs.k8s.io/cluster-api@v1.12}"
+    value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/{go://sigs.k8s.io/cluster-api@v1.12}/control-plane-components.yaml"
+    type: "url"
+    contract: v1beta1
+    replacements:
+    - old: --metrics-addr=127.0.0.1:8080
+      new: --metrics-addr=:8080
+    files:
+    - sourcePath: "../data/shared/capi/v1.12/metadata.yaml"
+
+- name: docker
+  type: InfrastructureProvider
+  versions:
+  - name: "{go://sigs.k8s.io/cluster-api@v1.13}"
+    value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/{go://sigs.k8s.io/cluster-api@v1.13}/infrastructure-components-development.yaml"
+    type: "url"
+    contract: v1beta2
+    replacements:
+    - old: --metrics-addr=127.0.0.1:8080
+      new: --metrics-addr=:8080
+    files:
+    - sourcePath: "../data/shared/capd/v1.13/metadata.yaml"
+  - name: v1.13.0
+    value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.13.0/infrastructure-components-development.yaml"
+    type: "url"
+    contract: v1beta2
+    replacements:
+    - old: --metrics-addr=127.0.0.1:8080
+      new: --metrics-addr=:8080
+    files:
+    - sourcePath: "../data/shared/capd/v1.13/metadata.yaml"
+  - name: "{go://sigs.k8s.io/cluster-api@v1.12}"
+    value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/{go://sigs.k8s.io/cluster-api@v1.12}/infrastructure-components-development.yaml"
+    type: "url"
+    contract: v1beta1
+    replacements:
+    - old: --metrics-addr=127.0.0.1:8080
+      new: --metrics-addr=:8080
+    files:
+    - sourcePath: "../data/shared/capd/v1.12/metadata.yaml"
+
+- name: metal3
+  type: IPAMProvider
+  versions:
+  - name: "v1.14.99"
+    value: "https://github.com/metal3-io/ip-address-manager/releases/download/v1.13.0/ipam-components.yaml"
+    type: "url"
+    contract: v1beta2
+    replacements:
+    - old: --metrics-addr=127.0.0.1:8080
+      new: --metrics-addr=:8080
+    files:
+    - sourcePath: "../data/shared/ipam-metal3/v1.14/metadata.yaml"
+      targetName: "metadata.yaml"
+  - name: "{go://github.com/metal3-io/ip-address-manager@v1.13}"
+    value: "https://github.com/metal3-io/ip-address-manager/releases/download/{go://github.com/metal3-io/ip-address-manager@v1.13}/ipam-components.yaml"
+    type: "url"
+    contract: v1beta2
+    replacements:
+    - old: --metrics-addr=127.0.0.1:8080
+      new: --metrics-addr=:8080
+    files:
+    - sourcePath: "../data/shared/ipam-metal3/v1.13/metadata.yaml"
+      targetName: "metadata.yaml"
+  - name: "{go://github.com/metal3-io/ip-address-manager@v1.12}"
+    value: "https://github.com/metal3-io/ip-address-manager/releases/download/{go://github.com/metal3-io/ip-address-manager@v1.12}/ipam-components.yaml"
+    type: "url"
+    contract: v1beta1
+    replacements:
+    - old: --metrics-addr=127.0.0.1:8080
+      new: --metrics-addr=:8080
+    files:
+    - sourcePath: "../data/shared/ipam-metal3/v1.12/metadata.yaml"
+      targetName: "metadata.yaml"
+
+variables:
+  KUBERNETES_VERSION: "${KUBERNETES_VERSION:-v1.36.0}"
+  KUBERNETES_VERSION_MINOR: "${KUBERNETES_VERSION%.*}"
+  CONTROL_PLANE_MACHINE_COUNT: 3
+  WORKER_MACHINE_COUNT: 1
+  NUM_NODES: 4
+  SCALE_SPEC_CONCURRENCY: 10
+  APIVersion: "infrastructure.cluster.x-k8s.io/${CAPM3_VERSION}"
+  APIGroup: "infrastructure.cluster.x-k8s.io"
+  CONTAINER_REGISTRY: "${CONTAINER_REGISTRY:-quay.io}"
+  DOCKER_HUB_PROXY: "${DOCKER_HUB_PROXY:-docker.io}"
+  CAPI_VERSION: "v1beta2"
+  IPAM_VERSION: "v1alpha1"
+
+
+intervals:
+  default/wait-controllers: ["10m", "10s"]
+  default/wait-ippool: ["60s", "5s"]
+  default/wait-cluster: ["20m", "30s"] # The second time to check the availibility of the cluster should happen late, so kcp object has time to be created
+  default/wait-control-plane: ["30m", "10s"]
+  #  Giving a bit more time during scale tests.
+  scale/wait-cluster: ["20m", "10s"]
+  scale/wait-control-plane: ["40m", "10s"]
+  default/wait-worker-nodes: ["60m", "10s"]
+  default/wait-delete-cluster: ["40m", "10s"]
+  default/wait-machine-upgrade: ["50m", "10s"]
+  default/wait-machine-remediation: ["30m", "10s"]
+  default/wait-nodes-ready: ["15m", "5s"]
+  default/monitor-vm-state: ["1m", "500ms"]
+  default/monitor-provisioning: ["5m", "500ms"]
+  default/wait-deployment: ["30m", "10s"]
+  default/wait-job: ["10m", "10s"]
+  default/wait-service: ["10m", "10s"]
+  default/wait-object-provisioned: ["10m", "10s"]
+  default/wait-cp-available: ["50m", "30s"]
+  default/wait-machine-deleting: ["15m", "2s"]
+  default/wait-machine-running: ["50m", "20s"]
+  default/wait-pod-restart: ["6m", "10s"]
+  default/wait-deprovision-cluster: ["30m", "10s"]
+  default/wait-all-pod-to-be-running-on-target-cluster: ["30m", "10s"]
+  default/wait-command: ["2m", "10s"]
+  default/wait-resource-stabilize: ["15m", "15s"]

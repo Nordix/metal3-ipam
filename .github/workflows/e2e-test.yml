@@ -1,0 +1,47 @@
+name: E2E Test
+
+on:
+  workflow_call:
+    runner:
+      type: string
+      default: "oracle-vm-4cpu-16gb-x86-64"
+    ginkgo-focus:
+      type: string
+      default: ""
+    ref:
+      type: string
+      default: ${{ github.ref }}
+    timeout-minutes:
+      type: number
+      default: 90
+
+permissions: {}
+
+jobs:
+  test:
+    name: E2E test
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      with:
+        ref: ${{ inputs.ref }}
+        persist-credentials: false
+
+    - name: Run IPAM e2e Tests
+      env:
+        GINKGO_FOCUS: "${{ inputs.ginkgo-focus }}"
+      # We need a new shell to pick up the new group. That is why we do the sudo -s -u $USER ...
+      # Remove the pre-installed go version. We install the exact version we need.
+      run: |
+        sudo -s -u $USER --preserve-env bash ${{ github.workspace }}/hack/e2e/ci-script.sh
+
+    - name: Upload artifacts
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: artifacts-e2e-ipam.tar.gz
+        path: test/e2e/_artifacts
+        if-no-files-found: error
+        overwrite: false
