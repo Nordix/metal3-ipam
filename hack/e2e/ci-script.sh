@@ -2,8 +2,7 @@
 
 # -----------------------------------------------------------------------------
 # Description: This script sets up the environment and runs E2E tests for the
-#              IPAM project. It uses ushy-tools as bmc protocol emulator.
-#              Supported protocols are: redfish and redfish-virtualmedia.
+#              IPAM project.
 # Usage:       From the root of the repo, run:
 #              ./test/e2e/ci-e2e.sh
 # -----------------------------------------------------------------------------
@@ -12,10 +11,6 @@ set -eux
 
 REPO_ROOT=$(realpath "$(dirname "${BASH_SOURCE[0]}")/../..")
 cd "${REPO_ROOT}" || exit 1
-
-# Set environment variables for the e2e tests
-export IPAMPATH="${REPO_ROOT}"
-FORCE_REPO_UPDATE="${FORCE_REPO_UPDATE:-false}"
 
 export IPAMRELEASEBRANCH="${IPAMRELEASEBRANCH:-main}"
 
@@ -34,6 +29,7 @@ export CAPI_CONFIG_FOLDER="${CONFIG_FOLDER}/cluster-api"
 
 # CAPI test framework uses kubectl in the background
 "${REPO_ROOT}/hack/e2e/ensure_kubectl.sh"
+"${REPO_ROOT}/hack/e2e/ensure_go.sh"
 
 # Verify they are available and have correct versions.
 PATH=$PATH:/usr/local/go/bin
@@ -44,6 +40,28 @@ case "${GINKGO_FOCUS:-}" in
     ;;
   *)
   ;;
+esac
+
+# Support label-based test filtering via E2E_TESTS env var.
+# Valid values: "basic", "features", "all" (default).
+# Examples:
+#   E2E_TESTS=basic ./hack/e2e/ci-script.sh    # Run only basic tests
+#   E2E_TESTS=features ./hack/e2e/ci-script.sh # Run only feature tests
+#   E2E_TESTS=all ./hack/e2e/ci-script.sh      # Run all tests (default)
+E2E_TESTS="${E2E_TESTS:-all}"
+case "${E2E_TESTS}" in
+  basic)
+    export GINKGO_FOCUS_LABELS="basic"
+    ;;
+  features)
+    export GINKGO_FOCUS_LABELS="features"
+    ;;
+  all)
+    ;;
+  *)
+    echo "ERROR: Invalid E2E_TESTS value '${E2E_TESTS}'. Valid values: basic, features, all"
+    exit 1
+    ;;
 esac
 
 # Run the e2e tests

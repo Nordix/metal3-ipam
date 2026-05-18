@@ -8,6 +8,10 @@ on:
     ginkgo-focus:
       type: string
       default: ""
+    e2e-tests:
+      type: string
+      default: "all"
+      description: "Which e2e test suite to run: basic, features, or all"
     ref:
       type: string
       default: ${{ github.ref }}
@@ -32,6 +36,7 @@ jobs:
     - name: Run IPAM e2e Tests
       env:
         GINKGO_FOCUS: "${{ inputs.ginkgo-focus }}"
+        E2E_TESTS: "${{ inputs.e2e-tests }}"
       # We need a new shell to pick up the new group. That is why we do the sudo -s -u $USER ...
       # Remove the pre-installed go version. We install the exact version we need.
       run: |

@@ -389,6 +389,7 @@ go-version: ## Print the go version we use to compile our binaries and images
 ## E2e stuff
 ## --------------------------------------
 GINKGO_FOCUS ?=
+GINKGO_FOCUS_LABELS ?=
 GINKGO_SKIP ?=
 GINKGO_SKIP_LABELS ?=
 GINKGO_NODES ?= 2
@@ -418,14 +419,22 @@ ifneq ($(strip $(GINKGO_SKIP_LABELS)),)
 _SKIP_LABELS_ARGS := --label-filter="!$(GINKGO_SKIP_LABELS)"
 endif
 
+# to focus on specific labels
+ifneq ($(strip $(GINKGO_FOCUS_LABELS)),)
+_FOCUS_LABELS_ARGS := --label-filter="$(GINKGO_FOCUS_LABELS)"
+endif
+
 ARTIFACTS ?= ${ROOT_DIR}/test/e2e/_artifacts
 
 .PHONY: test-e2e
+# features only: make test-e2e GINKGO_SKIP_LABELS=basic make test-e2e GINKGO_FOCUS_LABELS=features
+# basic only: make test-e2e GINKGO_SKIP_LABELS=features or make test-e2e GINKGO_FOCUS_LABELS=basic
+# all tests: make test-e2e
 test-e2e: $(GINKGO) ## Run the end-to-end tests
 	$(GINKGO) -v --trace -poll-progress-after=$(GINKGO_POLL_PROGRESS_AFTER) \
 		-poll-progress-interval=$(GINKGO_POLL_PROGRESS_INTERVAL) --tags=e2e \
 		--focus="$(GINKGO_FOCUS)" \
-		$(_SKIP_ARGS)  $(_SKIP_LABELS_ARGS) \
+		$(_SKIP_ARGS)  $(_SKIP_LABELS_ARGS) $(_FOCUS_LABELS_ARGS) \
 		--nodes=$(GINKGO_NODES) \
 		--timeout=$(GINKGO_TIMEOUT) \
 		--no-color=$(GINKGO_NOCOLOR) \

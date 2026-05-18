@@ -19,12 +19,13 @@ import (
 var (
 	ctx                 = context.TODO()
 	specName            = "ipam-e2e"
-	namespace           = "default"
+	namespace           string
 	clusterctlLogFolder string
 )
 
-var _ = Describe("Metal3 IPAM basic functionality", Label("ipam"), func() {
+var _ = Describe("Metal3 IPAM basic functionality", Label("ipam", "basic"), func() {
 	BeforeEach(func() {
+		namespace = testNamespace()
 		validateGlobals(specName)
 		cl := bootstrapClusterProxy.GetClient()
 		// Create namespace for the test if it doesn't exist
@@ -39,22 +40,14 @@ var _ = Describe("Metal3 IPAM basic functionality", Label("ipam"), func() {
 		cleanupTestResources(ctx, cl)
 	})
 
-	It("Should create and verify an IPPool", func() {
-		By("Creating an IPPool in the bootstrap cluster")
-		ipPool := createIPPool(ctx, bootstrapClusterProxy, "test-ippool-basic")
-
-		By("Verifying that the IPPool is created successfully")
-		verifyIPPool(ctx, bootstrapClusterProxy, ipPool)
-
-		By("Cleaning up the IPPool")
-		Expect(bootstrapClusterProxy.GetClient().Delete(ctx, ipPool)).To(Succeed())
-	})
-
 	It("Should allocate an IPAddress via Metal3 IPClaim", func() {
 		cl := bootstrapClusterProxy.GetClient()
 
 		By("Creating an IPPool")
 		ipPool := createIPPool(ctx, bootstrapClusterProxy, "test-ippool-m3claim")
+
+		By("Verifying that the IPPool is created successfully")
+		verifyIPPool(ctx, bootstrapClusterProxy, ipPool)
 
 		By("Creating a Metal3 IPClaim referencing the pool")
 		claimName := fmt.Sprintf("test-ipclaim-%d", GinkgoParallelProcess())
@@ -89,6 +82,16 @@ var _ = Describe("Metal3 IPAM basic functionality", Label("ipam"), func() {
 			err := cl.Get(ctx, client.ObjectKeyFromObject(ipClaim), &ipamv1.IPClaim{})
 			return apierrors.IsNotFound(err)
 		}, e2eConfig.GetIntervals(specName, "wait-ippool")...).Should(BeTrue(), "IPClaim should be deleted")
+
+		By("Verifying the IPAddress is deleted after IPClaim removal")
+		Eventually(func() bool {
+			err := cl.Get(ctx, client.ObjectKey{
+				Namespace: ipAddress.Namespace,
+				Name:      ipAddress.Name,
+			}, &ipamv1.IPAddress{})
+			return apierrors.IsNotFound(err)
+		}, e2eConfig.GetIntervals(specName, "wait-ippool")...).Should(BeTrue(), "IPAddress should be cleaned up after IPClaim deletion")
+
 		Expect(cl.Delete(ctx, ipPool)).To(Succeed())
 	})
 
@@ -97,6 +100,9 @@ var _ = Describe("Metal3 IPAM basic functionality", Label("ipam"), func() {
 
 		By("Creating an IPPool")
 		ipPool := createIPPool(ctx, bootstrapClusterProxy, "test-ippool-capi")
+
+		By("Verifying that the IPPool is created successfully")
+		verifyIPPool(ctx, bootstrapClusterProxy, ipPool)
 
 		By("Creating a CAPI IPAddressClaim referencing the Metal3 IPPool")
 		claimName := fmt.Sprintf("test-capi-ipclaim-%d", GinkgoParallelProcess())
@@ -133,78 +139,16 @@ var _ = Describe("Metal3 IPAM basic functionality", Label("ipam"), func() {
 			err := cl.Get(ctx, client.ObjectKeyFromObject(ipAddressClaim), &capipamv1.IPAddressClaim{})
 			return apierrors.IsNotFound(err)
 		}, e2eConfig.GetIntervals(specName, "wait-ippool")...).Should(BeTrue(), "IPAddressClaim should be deleted")
-		Expect(cl.Delete(ctx, ipPool)).To(Succeed())
-	})
 
-	It("Should clean up IPAddress when Metal3 IPClaim is deleted", func() {
-		cl := bootstrapClusterProxy.GetClient()
-
-		By("Creating an IPPool and IPClaim")
-		ipPool := createIPPool(ctx, bootstrapClusterProxy, "test-ippool-cleanup")
-		claimName := fmt.Sprintf("test-ipclaim-cleanup-%d", GinkgoParallelProcess())
-		ipClaim := createIPClaim(ctx, bootstrapClusterProxy, ipPool.Name, claimName)
-
-		By("Waiting for IPAddress to be allocated")
-		var ipAddressName string
-		Eventually(func(g Gomega) {
-			retrieved := &ipamv1.IPClaim{}
-			g.Expect(cl.Get(ctx, client.ObjectKeyFromObject(ipClaim), retrieved)).To(Succeed())
-			g.Expect(retrieved.Status.Address).ToNot(BeNil())
-			ipAddressName = retrieved.Status.Address.Name
-		}, e2eConfig.GetIntervals(specName, "wait-ippool")...).Should(Succeed())
-
-		By("Deleting the IPClaim")
-		Expect(cl.Delete(ctx, ipClaim)).To(Succeed())
-
-		By("Verifying the IPClaim is removed")
+		By("Verifying the CAPI IPAddress is deleted after IPAddressClaim removal")
 		Eventually(func() bool {
-			err := cl.Get(ctx, client.ObjectKeyFromObject(ipClaim), &ipamv1.IPClaim{})
-			return apierrors.IsNotFound(err)
-		}, e2eConfig.GetIntervals(specName, "wait-ippool")...).Should(BeTrue(), "IPClaim should be deleted")
-
-		By("Verifying the Metal3 IPAddress is garbage collected")
-		Eventually(func() bool {
-			err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: ipAddressName}, &ipamv1.IPAddress{})
-			return apierrors.IsNotFound(err)
-		}, e2eConfig.GetIntervals(specName, "wait-ippool")...).Should(BeTrue(), "IPAddress should be cleaned up after IPClaim deletion")
-
-		By("Cleaning up IPPool")
-		Expect(cl.Delete(ctx, ipPool)).To(Succeed())
-	})
-
-	It("Should clean up CAPI IPAddress when IPAddressClaim is deleted", func() {
-		cl := bootstrapClusterProxy.GetClient()
-
-		By("Creating an IPPool and CAPI IPAddressClaim")
-		ipPool := createIPPool(ctx, bootstrapClusterProxy, "test-ippool-capi-cleanup")
-		claimName := fmt.Sprintf("test-capi-ipclaim-cleanup-%d", GinkgoParallelProcess())
-		ipAddressClaim := createCAPIIPAddressClaim(ctx, bootstrapClusterProxy, ipPool.Name, claimName)
-
-		By("Waiting for CAPI IPAddress to be allocated")
-		var capiIPAddressName string
-		Eventually(func(g Gomega) {
-			retrieved := &capipamv1.IPAddressClaim{}
-			g.Expect(cl.Get(ctx, client.ObjectKeyFromObject(ipAddressClaim), retrieved)).To(Succeed())
-			g.Expect(retrieved.Status.AddressRef.Name).ToNot(BeEmpty())
-			capiIPAddressName = retrieved.Status.AddressRef.Name
-		}, e2eConfig.GetIntervals(specName, "wait-ippool")...).Should(Succeed())
-
-		By("Deleting the CAPI IPAddressClaim")
-		Expect(cl.Delete(ctx, ipAddressClaim)).To(Succeed())
-
-		By("Verifying the CAPI IPAddressClaim is removed")
-		Eventually(func() bool {
-			err := cl.Get(ctx, client.ObjectKeyFromObject(ipAddressClaim), &capipamv1.IPAddressClaim{})
-			return apierrors.IsNotFound(err)
-		}, e2eConfig.GetIntervals(specName, "wait-ippool")...).Should(BeTrue(), "IPAddressClaim should be deleted")
-
-		By("Verifying the CAPI IPAddress is garbage collected")
-		Eventually(func() bool {
-			err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: capiIPAddressName}, &capipamv1.IPAddress{})
+			err := cl.Get(ctx, client.ObjectKey{
+				Namespace: capiIPAddress.Namespace,
+				Name:      capiIPAddress.Name,
+			}, &capipamv1.IPAddress{})
 			return apierrors.IsNotFound(err)
 		}, e2eConfig.GetIntervals(specName, "wait-ippool")...).Should(BeTrue(), "CAPI IPAddress should be cleaned up after IPAddressClaim deletion")
 
-		By("Cleaning up IPPool")
 		Expect(cl.Delete(ctx, ipPool)).To(Succeed())
 	})
 })

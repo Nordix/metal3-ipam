@@ -15,6 +15,12 @@ func Logf(format string, a ...any) {
 	fmt.Fprintf(GinkgoWriter, "INFO: "+format+"\n", a...)
 }
 
+// testNamespace returns a namespace unique to the current parallel Ginkgo node,
+// preventing parallel test interference when running with multiple nodes.
+func testNamespace() string {
+	return fmt.Sprintf("ipam-e2e-%d", GinkgoParallelProcess())
+}
+
 func DumpSpecResourcesAndCleanup(ctx context.Context, specName string, bootstrapClusterProxy framework.ClusterProxy, _ framework.ClusterProxy, artifactFolder string, namespace string, intervalsGetter func(spec, key string) []any, clusterName, clusterctlLogFolder string, skipCleanup bool, clusterctlConfigPath string) {
 	Expect(os.RemoveAll(clusterctlLogFolder)).To(Succeed())
 	clusterClient := bootstrapClusterProxy.GetClient()
