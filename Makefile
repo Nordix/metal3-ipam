@@ -35,6 +35,7 @@ export GO111MODULE=on
 ROOT_DIR := $(shell pwd)
 TOOLS_DIR := hack/tools
 APIS_DIR := api
+TEST_DIR := test
 WEBHOOKS_DIR := internal/webhooks
 TOOLS_BIN_DIR := $(TOOLS_DIR)/bin
 BIN_DIR := bin
@@ -178,6 +179,7 @@ lint: $(GOLANGCI_LINT) ## Lint codebase
 	$(GOLANGCI_LINT) run -v $(GOLANGCI_LINT_EXTRA_ARGS) --timeout=10m
 	cd $(APIS_DIR); ../$(GOLANGCI_LINT) run -v $(GOLANGCI_LINT_EXTRA_ARGS) --timeout=10m
 	cd $(TOOLS_DIR)/release; ../../../$(GOLANGCI_LINT) run -v --build-tags=tools --modules-download-mode=readonly $(GOLANGCI_LINT_EXTRA_ARGS) --timeout=10m
+	cd $(TEST_DIR); ../$(GOLANGCI_LINT) run -v --build-tags=e2e $(GOLANGCI_LINT_EXTRA_ARGS) --timeout=10m
 
 .PHONY: lint-fix
 lint-fix: $(GOLANGCI_LINT) ## Lint the codebase and run auto-fixers if supported by the linter
@@ -195,6 +197,8 @@ modules: ## Runs go mod to ensure proper vendoring.
 	cd $(TOOLS_DIR); go mod verify
 	cd $(APIS_DIR); go mod tidy
 	cd $(APIS_DIR); go mod verify
+	cd $(TEST_DIR); go mod tidy
+	cd $(TEST_DIR); go mod verify
 
 .PHONY: generate
 generate: ## Generate code
@@ -378,7 +382,7 @@ verify-boilerplate:
 
 .PHONY: verify-modules
 verify-modules: modules
-	@if !(git diff --quiet HEAD -- go.sum go.mod hack/tools/go.mod hack/tools/go.sum); then \
+	@if !(git diff --quiet HEAD -- go.sum go.mod hack/tools/go.mod hack/tools/go.sum test/go.mod test/go.sum); then \
 		echo "go module files are out of date"; exit 1; \
 	fi
 
