@@ -177,9 +177,9 @@ $(SETUP_ENVTEST):
 .PHONY: lint
 lint: $(GOLANGCI_LINT) ## Lint codebase
 	$(GOLANGCI_LINT) run -v $(GOLANGCI_LINT_EXTRA_ARGS) --timeout=10m
-	cd $(APIS_DIR); ../$(GOLANGCI_LINT) run -v $(GOLANGCI_LINT_EXTRA_ARGS) --timeout=10m
-	cd $(TOOLS_DIR)/release; ../../../$(GOLANGCI_LINT) run -v --build-tags=tools --modules-download-mode=readonly $(GOLANGCI_LINT_EXTRA_ARGS) --timeout=10m
-	cd $(TEST_DIR); ../$(GOLANGCI_LINT) run -v --build-tags=e2e $(GOLANGCI_LINT_EXTRA_ARGS) --timeout=10m
+	cd $(APIS_DIR); $(GOLANGCI_LINT) run -v $(GOLANGCI_LINT_EXTRA_ARGS) --timeout=10m
+	cd $(TOOLS_DIR)/release; $(GOLANGCI_LINT) run -v --build-tags=tools --modules-download-mode=readonly $(GOLANGCI_LINT_EXTRA_ARGS) --timeout=10m
+	cd $(TEST_DIR); $(GOLANGCI_LINT) run -v --build-tags=e2e $(GOLANGCI_LINT_EXTRA_ARGS) --timeout=10m
 
 .PHONY: lint-fix
 lint-fix: $(GOLANGCI_LINT) ## Lint the codebase and run auto-fixers if supported by the linter

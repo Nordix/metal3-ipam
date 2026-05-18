@@ -68,8 +68,7 @@ esac
 make test-e2e
 test_status="$?"
 
-LOGS_DIR="${REPO_ROOT}/test/e2e/_artifacts/logs"
 # Collect all artifacts
-tar --directory ${REPO_ROOT}/test/e2e/_artifacts/ -czf "artifacts-e2e-ipam.tar.gz" ${REPO_ROOT}/test/e2e/_artifacts/
+tar --directory "${REPO_ROOT}/test/e2e/_artifacts/" -czf "artifacts-e2e-ipam.tar.gz" "${REPO_ROOT}/test/e2e/_artifacts/"
 
 exit "${test_status}"
