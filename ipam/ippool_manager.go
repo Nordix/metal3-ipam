@@ -242,7 +242,41 @@ func (m *IPPoolManager) UpdateAddresses(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	if err := m.updateAddressCounts(count); err != nil {
+		// Best-effort: don't fail reconcile just because counts can't be computed.
+		m.Log.Error(err, "Failed to update IP address counts")
+	}
 	return count, nil
+}
+
+// updateAddressCounts computes the total and available IP counts for the pool
+// and records them in the status. Total is the sum of all pool sizes, and available
+// is the total minus the number of the addresses currently in use (inUse).
+func (m *IPPoolManager) updateAddressCounts(inUse int) error {
+	var total int64
+	for _, pool := range m.IPPool.Spec.Pools {
+		size, err := ipamv1.GetPoolSize(pool)
+		if err != nil {
+			// Clear any previously published counts so we don't leave stale
+			// values when the pool spec can no longer be sized.
+			if m.IPPool.Status.TotalIPCount != nil || m.IPPool.Status.AvailableIPCount != nil {
+				m.IPPool.Status.TotalIPCount = nil
+				m.IPPool.Status.AvailableIPCount = nil
+				m.updateStatusTimestamp()
+			}
+			return fmt.Errorf("failed to get pool size: %w", err)
+		}
+		total += int64(size)
+	}
+
+	available := total - int64(inUse)
+	if available < 0 {
+		available = 0
+	}
+
+	m.IPPool.Status.TotalIPCount = &total
+	m.IPPool.Status.AvailableIPCount = &available
+	return nil
 }
 
 // UpdateM3Addresses manages the ipclaims.ipam.metal3.io and creates or deletes IPAddress.ipam.metal3.io accordingly.

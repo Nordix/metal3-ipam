@@ -108,6 +108,17 @@ type IPPoolStatus struct {
 
 	// Allocations contains the map of objects and IP addresses they have
 	Allocations map[string]IPAddressStr `json:"indexes,omitempty"`
+
+	// TotalIPCount is the total number of allocatable IP addresses summed
+	// across all the pools defined in the spec.
+	// +optional
+	TotalIPCount *int64 `json:"totalIPCount,omitempty"`
+
+	// AvailableIPCount is the number of IP addresses in the pools that are
+	// not currently in use, i.e. TotalIPCount minus the addresses already
+	// allocated.
+	// +optional
+	AvailableIPCount *int64 `json:"availableIPCount,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -117,6 +128,8 @@ type IPPoolStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:printcolumn:name="Cluster",type="string",JSONPath=".metadata.labels.cluster\\.x-k8s\\.io/cluster-name",description="Cluster to which this template belongs"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp",description="Time duration since creation of Metal3IPPool"
+// +kubebuilder:printcolumn:name="Total IPs",type="integer",JSONPath=".status.totalIPCount",description="Total allocatable IPs in the pool"
+// +kubebuilder:printcolumn:name="Available IPs",type="integer",JSONPath=".status.availableIPCount",description="Unallocated IPs in the pool"
 // IPPool is the Schema for the ippools API.
 type IPPool struct {
 	metav1.TypeMeta   `json:",inline"`

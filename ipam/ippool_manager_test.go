@@ -81,6 +81,168 @@ var _ = Describe("IPPool manager", func() {
 		}),
 	)
 
+	type addressCountsTestCase struct {
+		pool            []ipamv1.Pool
+		inUse           int
+		expectError     bool
+		expectTotal     int64
+		expectAvailable int64
+	}
+
+	DescribeTable("Test updateAddressCounts",
+		func(tc addressCountsTestCase) {
+			ipPool := &ipamv1.IPPool{
+				Spec: ipamv1.IPPoolSpec{
+					Pools: tc.pool,
+				},
+			}
+			ipPoolMgr, err := NewIPPoolManager(nil, ipPool, logr.Discard())
+			Expect(err).NotTo(HaveOccurred())
+
+			err = ipPoolMgr.updateAddressCounts(tc.inUse)
+
+			if tc.expectError {
+				Expect(err).To(HaveOccurred())
+				// On error the count must be left unset.
+				Expect(ipPool.Status.TotalIPCount).To(BeNil())
+				Expect(ipPool.Status.AvailableIPCount).To(BeNil())
+				return
+			}
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ipPool.Status.TotalIPCount).NotTo(BeNil())
+			Expect(*ipPool.Status.TotalIPCount).To(Equal(tc.expectTotal))
+			Expect(ipPool.Status.AvailableIPCount).NotTo(BeNil())
+			Expect(*ipPool.Status.AvailableIPCount).To(Equal(tc.expectAvailable))
+		},
+		Entry("single pool, some in use", addressCountsTestCase{
+			pool: []ipamv1.Pool{
+				{
+					Start: (*ipamv1.IPAddressStr)(ptr.To("192.168.0.10")),
+					End:   (*ipamv1.IPAddressStr)(ptr.To("192.168.0.20")),
+				},
+			},
+			inUse:           3,
+			expectTotal:     11, // .10 through .20 inclusive
+			expectAvailable: 8,
+		}),
+		Entry("multiple pools summed", addressCountsTestCase{
+			pool: []ipamv1.Pool{
+				{
+					Start: (*ipamv1.IPAddressStr)(ptr.To("192.168.0.10")),
+					End:   (*ipamv1.IPAddressStr)(ptr.To("192.168.0.20")),
+				},
+				{
+					Start: (*ipamv1.IPAddressStr)(ptr.To("192.168.0.30")),
+					End:   (*ipamv1.IPAddressStr)(ptr.To("192.168.0.34")),
+				},
+			},
+			inUse:           2,
+			expectTotal:     16, // 11 + 5
+			expectAvailable: 14,
+		}),
+		Entry("over-allocated clamps available to zero", addressCountsTestCase{
+			pool: []ipamv1.Pool{
+				{
+					Start: (*ipamv1.IPAddressStr)(ptr.To("192.168.0.10")),
+					End:   (*ipamv1.IPAddressStr)(ptr.To("192.168.0.20")),
+				},
+			},
+			inUse:           15,
+			expectTotal:     11,
+			expectAvailable: 0,
+		}),
+		Entry("misconfigured pool returns error and leaves counts unset", addressCountsTestCase{
+			pool: []ipamv1.Pool{
+				{
+					// Start with neither End nor Subnet: size cannot be computed.
+					Start: (*ipamv1.IPAddressStr)(ptr.To("192.168.0.10")),
+				},
+			},
+			inUse:       0,
+			expectError: true,
+		}),
+		Entry("subnet-only pool", addressCountsTestCase{
+			pool: []ipamv1.Pool{
+				{
+					Subnet: (*ipamv1.IPSubnetStr)(ptr.To("192.168.0.0/30")),
+				},
+			},
+			inUse:           1,
+			expectTotal:     3, // /30 has 4 addresses; the network address is excluded
+			expectAvailable: 2,
+		}),
+		Entry("mixed start/end and subnet pools", addressCountsTestCase{
+			pool: []ipamv1.Pool{
+				{
+					Start: (*ipamv1.IPAddressStr)(ptr.To("192.168.0.10")),
+					End:   (*ipamv1.IPAddressStr)(ptr.To("192.168.0.20")),
+				},
+				{
+					Subnet: (*ipamv1.IPSubnetStr)(ptr.To("192.168.1.0/30")),
+				},
+			},
+			inUse:           4,
+			expectTotal:     14, // 11 + 3
+			expectAvailable: 10,
+		}),
+	)
+
+	It("populates total and available IP counts through UpdateAddresses", func() {
+		ipPool := &ipamv1.IPPool{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-pool",
+				Namespace: "myns",
+			},
+			Spec: ipamv1.IPPoolSpec{
+				NamePrefix: "test",
+				Pools: []ipamv1.Pool{
+					{
+						Start: (*ipamv1.IPAddressStr)(ptr.To("192.168.0.10")),
+						End:   (*ipamv1.IPAddressStr)(ptr.To("192.168.0.20")),
+					},
+				},
+			},
+		}
+		// A single claim against this pool, so exactly one address gets allocated.
+		ipClaim := &ipamv1.IPClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-claim",
+				Namespace: "myns",
+			},
+			Spec: ipamv1.IPClaimSpec{
+				Pool: corev1.ObjectReference{
+					Name:      "test-pool",
+					Namespace: "myns",
+				},
+			},
+		}
+
+		c := fakeclient.NewClientBuilder().
+			WithScheme(setupScheme()).
+			WithObjects(ipClaim).
+			WithStatusSubresource(
+				&ipamv1.IPClaim{},
+				&ipamv1.IPAddress{},
+				&capipamv1.IPAddressClaim{},
+				&capipamv1.IPAddress{},
+			).
+			Build()
+
+		ipPoolMgr, err := NewIPPoolManager(c, ipPool, logr.Discard())
+		Expect(err).NotTo(HaveOccurred())
+
+		count, err := ipPoolMgr.UpdateAddresses(context.TODO())
+		Expect(err).NotTo(HaveOccurred())
+
+		// Pool has 11 IPs (.10–.20 inclusive); one is now in use.
+		Expect(count).To(Equal(1))
+		Expect(ipPool.Status.TotalIPCount).NotTo(BeNil())
+		Expect(*ipPool.Status.TotalIPCount).To(Equal(int64(11)))
+		Expect(ipPool.Status.AvailableIPCount).NotTo(BeNil())
+		Expect(*ipPool.Status.AvailableIPCount).To(Equal(int64(10)))
+	})
+
 	type testCaseSetClusterOwnerRef struct {
 		cluster     *clusterv1.Cluster
 		ipPool      *ipamv1.IPPool

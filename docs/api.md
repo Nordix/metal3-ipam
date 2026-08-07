@@ -55,6 +55,13 @@ as follows :
 * **gateway**: override of the default gateway for this pool
 * **DNSServers**: override of the default dns servers for this pool
 
+The *status* field reports observed state:
+
+* **totalIPCount**: The total number of allocatable IP addresses summed across
+all pools in the spec.
+* **availableIPCount**: the number of addresses not currently in use
+(totalIPCount minus allocated addresses).
+
 ## IPClaim
 
 An IPClaim is an object representing a request for an IP address allocation.
