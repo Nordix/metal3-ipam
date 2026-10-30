@@ -1388,6 +1388,7 @@ var _ = Describe("IPPool manager", func() {
 				"cabce": "192.168.0.12",
 			},
 			expectedNbAllocations: 2,
+			expectRequeue:         true,
 		}),
 		Entry("Both IPClaim and IPAddressClaim present with error in existing claims and deletion timestamp", testCaseUpdateAddresses{
 			ipPool: &ipamv1.IPPool{
@@ -2142,7 +2143,7 @@ var _ = Describe("IPPool manager", func() {
 				ipamv1.IPAddressStr("192.168.0.11"): "bcd",
 			},
 			expectedIPAddresses: []string{},
-			expectError:         true,
+			expectRequeue:       true,
 		}),
 	)
 
@@ -2482,7 +2483,7 @@ var _ = Describe("IPPool manager", func() {
 				"192.168.0.11": "bcd",
 			},
 			expectedIPAddresses: []string{},
-			expectError:         true,
+			expectRequeue:       true,
 		}),
 	)
 
@@ -4227,7 +4228,10 @@ var _ = Describe("IPPool manager", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			allocatedAddress, _, _, _, err := ipPoolMgr.allocateAddress(ipClaim, addresses)
-			Expect(err).To(MatchError("exhausted IP pools"))
+			Expect(err).To(MatchError(ContainSubstring("exhausted IP pools")))
+			var re ReconcileError
+			Expect(errors.As(err, &re)).To(BeTrue())
+			Expect(re.IsTransient()).To(BeTrue())
 			Expect(allocatedAddress).To(Equal(ipamv1.IPAddressStr("")))
 			Expect(ipClaim.Status.ErrorMessage).To(Equal(ptr.To("Exhausted IP Pools")))
 		})
